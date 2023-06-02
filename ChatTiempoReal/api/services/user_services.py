@@ -20,3 +20,7 @@ def create_user(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     return user_data
+
+
+def get_all_users():
+    return list(db["users"].find())
