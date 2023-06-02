@@ -1,10 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, constr, ValidationError, validator
 
 
 class UserCreate(BaseModel):
-    username: str = Field(..., description="El nombre de usuario es obligatorio.")
-    email: str = Field(..., description="El email es obligatorio.")
-    password: str = Field(..., description="La contraseña es obligatoria.")
+    username: constr(min_length=5, max_length=20)
+    email: EmailStr
+    password: constr(min_length=8, max_length=15)
 
 
 class User(BaseModel):
