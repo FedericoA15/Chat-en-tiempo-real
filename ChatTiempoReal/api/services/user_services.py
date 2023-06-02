@@ -24,3 +24,8 @@ def create_user(user: UserCreate):
 
 def get_all_users():
     return list(db["users"].find())
+
+
+def get_user_by_id(user_id: str):
+    user = db["users"].find_one({"_id": user_id})
+    return user
