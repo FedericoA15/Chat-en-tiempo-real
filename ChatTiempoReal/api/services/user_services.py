@@ -1,6 +1,7 @@
 from models.users import UserCreate
 from database.db import get_database
 from bson import ObjectId
+from fastapi import HTTPException
 
 db = get_database()
 
