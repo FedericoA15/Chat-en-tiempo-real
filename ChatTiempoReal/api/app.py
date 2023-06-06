@@ -3,6 +3,7 @@ from fastapi.websockets import WebSocketDisconnect
 import uvicorn
 from database.db import get_database
 from routers.users import router as users_router
+import json
 
 app = FastAPI()
 
@@ -22,7 +23,7 @@ def save_message(sender_id: str, recipient_id: str, message: str):
     message_data = {
         "sender_id": sender_id,
         "recipient_id": recipient_id,
-        "message": message,
+        "message": json.loads(message)["message"],
     }
 
     # Insertar el documento en la colección
@@ -66,12 +67,21 @@ async def chat_websocket(websocket: WebSocket, user_id: str, recipient_id: str):
         # Recuperar los mensajes del chat desde la base de datos
         chat_messages = get_chat_messages(user_id, recipient_id)
 
-        # Enviar los mensajes anteriores al usuario recién conectado
+        # Agregar los mensajes anteriores a una lista
+        previous_messages = []
         for message_data in chat_messages:
             sender = message_data["sender_id"]
             message = message_data["message"]
-            previous_message = f"User {sender}: {message}"
-            await websocket.send_text(previous_message)
+            previous_message = {
+                "userId": sender,
+                "recipient_id": recipient_id,
+                "message": message,
+            }
+            previous_messages.append(previous_message)
+
+        if previous_messages:
+            # Enviar los mensajes anteriores al usuario recién conectado
+            await websocket.send_json(previous_messages)
 
         while True:
             # Recibir mensaje del cliente
@@ -81,7 +91,9 @@ async def chat_websocket(websocket: WebSocket, user_id: str, recipient_id: str):
             save_message(user_id, recipient_id, message)
 
             # Enviar el mensaje al usuario actual
-            await websocket.send_text(f"You: {message}")
+            await websocket.send_json(
+                {"userId": user_id, "recipient_id": recipient_id, "message": message}
+            )
 
             # Buscar la conexión del destinatario
             recipient_connection = next(
@@ -95,8 +107,12 @@ async def chat_websocket(websocket: WebSocket, user_id: str, recipient_id: str):
 
             if recipient_connection:
                 # Enviar el mensaje al destinatario
-                await recipient_connection["websocket"].send_text(
-                    f"User {user_id}: {message}"
+                await recipient_connection["websocket"].send_json(
+                    {
+                        "userId": user_id,
+                        "recipient_id": recipient_id,
+                        "message": message,
+                    }
                 )
 
     except WebSocketDisconnect:
