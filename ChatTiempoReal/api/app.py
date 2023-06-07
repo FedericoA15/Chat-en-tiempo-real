@@ -16,42 +16,59 @@ app.include_router(users_router)
 
 # Función para guardar el mensaje en la base de datos
 def save_message(sender_id: str, recipient_id: str, message: str):
-    # Obtener la colección de mensajes (crearla si no existe)
-    collection = db["chat_messages"]
+    # Obtener la colección de conversaciones (crearla si no existe)
+    collection = db["chat_conversations"]
 
-    # Crear el documento del mensaje
-    message_data = {
-        "sender_id": sender_id,
-        "recipient_id": recipient_id,
-        "message": json.loads(message)["message"],
-    }
+    # Buscar el documento de la conversación entre el remitente y el destinatario
+    conversation = collection.find_one(
+        {
+            "$or": [
+                {"participants": [sender_id, recipient_id]},
+                {"participants": [recipient_id, sender_id]},
+            ]
+        }
+    )
 
-    # Insertar el documento en la colección
-    collection.insert_one(message_data)
+    if conversation:
+        # Actualizar el documento existente con el nuevo mensaje
+        collection.update_one(
+            {"_id": conversation["_id"]},
+            {"$push": {"messages": json.loads(message)["message"]}},
+        )
+    else:
+        # Crear un nuevo documento de conversación y agregar el mensaje
+        conversation_data = {
+            "participants": [sender_id, recipient_id],
+            "messages": [json.loads(message)["message"]],
+        }
+        collection.insert_one(conversation_data)
 
 
 # Ruta principal
 @app.get("/")
 def home():
-    return {"message": "Welcome to the chat application"}
+    return {"message": "Bienvenido a la aplicación de chat"}
 
 
 def get_chat_messages(sender_id: str, recipient_id: str):
-    # Obtener la colección de mensajes
-    collection = db["chat_messages"]
+    # Obtener la colección de conversaciones
+    collection = db["chat_conversations"]
 
-    # Consultar los documentos de la colección que coinciden con el remitente y el destinatario
-    messages = collection.find(
+    # Buscar el documento de la conversación entre el remitente y el destinatario
+    conversation = collection.find_one(
         {
             "$or": [
-                {"sender_id": sender_id, "recipient_id": recipient_id},
-                {"sender_id": recipient_id, "recipient_id": sender_id},
+                {"participants": [sender_id, recipient_id]},
+                {"participants": [recipient_id, sender_id]},
             ]
         }
     )
 
-    # Devolver los mensajes como una lista de diccionarios
-    return list(messages)
+    if conversation:
+        # Devolver los mensajes de la conversación
+        return conversation["messages"]
+    else:
+        return []
 
 
 @app.websocket("/chat/{user_id}/{recipient_id}")
@@ -69,11 +86,9 @@ async def chat_websocket(websocket: WebSocket, user_id: str, recipient_id: str):
 
         # Agregar los mensajes anteriores a una lista
         previous_messages = []
-        for message_data in chat_messages:
-            sender = message_data["sender_id"]
-            message = message_data["message"]
+        for message in chat_messages:
             previous_message = {
-                "userId": sender,
+                "userId": user_id,
                 "recipient_id": recipient_id,
                 "message": message,
             }
@@ -124,6 +139,30 @@ async def chat_websocket(websocket: WebSocket, user_id: str, recipient_id: str):
         ]
 
 
+@app.get("/chat/{user_id}/{recipient_id}")
+@app.get("/chat/{user_id}/{recipient_id}")
+def get_chat_conversation(user_id: str, recipient_id: str):
+    collection = db["chat_conversations"]
+
+    conversation = collection.find_one(
+        {
+            "$or": [
+                {"participants": [user_id, recipient_id]},
+                {"participants": [recipient_id, user_id]},
+            ]
+        },
+        {"messages": 1, "_id": 0},  # Proyectar solo el campo "messages" y excluir "_id"
+    )
+
+    if conversation:
+        return conversation["messages"]
+    else:
+        return {"message": "Conversación no encontrada"}
+
+
 if __name__ == "__main__":
-    print("Starting server...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    print("Iniciando el servidor...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
