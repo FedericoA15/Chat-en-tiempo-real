@@ -45,3 +45,20 @@ async def chat_endpoint(websocket: WebSocket, sender_id: str, recipient_id: str)
         recipient_connection = connections.get(recipient_id)
         if recipient_connection:
             await recipient_connection.send_text(message)
+
+
+# Ruta para recuperar todos los mensajes de una conversación
+@app.get("/conversation/{sender_id}/{recipient_id}")
+def get_conversation(sender_id: str, recipient_id: str):
+    db = get_database()
+
+    # Buscar el documento de la conversación
+    conversation = db.conversations.find_one(
+        {"participants": {"$all": [sender_id, recipient_id]}}
+    )
+
+    if conversation is None:
+        return {"message": "Conversación no encontrada"}
+
+    messages = conversation.get("messages", [])
+    return {"messages": messages}
