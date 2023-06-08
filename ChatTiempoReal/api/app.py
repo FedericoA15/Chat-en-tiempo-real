@@ -1,9 +1,21 @@
 from fastapi import FastAPI
 from fastapi import WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 from database.db import get_database
 
 app = FastAPI()
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Almacenamien
 
 # Almacenamiento temporal de conexiones de WebSocket por usuario
 connections: Dict[str, WebSocket] = {}
