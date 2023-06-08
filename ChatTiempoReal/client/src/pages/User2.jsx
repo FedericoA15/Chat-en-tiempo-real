@@ -7,6 +7,18 @@ const User2 = () => {
   const [websocket, setWebsocket] = useState(null);
 
   useEffect(() => {
+    // Obtener la conversación completa antes de establecer la conexión WebSocket
+    fetch("http://127.0.0.1:8000/conversation/2/1")
+      .then((response) => response.json())
+      .then((data) => {
+        const retrievedMessages = data.messages.map((messageData) => messageData.message);
+        console.log(retrievedMessages);
+        setMessages(retrievedMessages);
+      })
+      .catch((error) => {
+        console.error("Error al obtener la conversación:", error);
+      });
+
     // Crea una nueva instancia de WebSocket
     const newWebsocket = new WebSocket("ws://127.0.0.1:8000/chat/2/1");
     setWebsocket(newWebsocket);
