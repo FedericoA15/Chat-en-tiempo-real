@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { w3cwebsocket as WebSocket } from "websocket";
+import "./User1.css"; // Archivo CSS para los estilos
 
 const User1 = () => {
   const [messages, setMessages] = useState([]);
@@ -54,14 +55,28 @@ const User1 = () => {
   };
 
   return (
-    <div>
-      <div>
+    <div className='chat-container'>
+      <div className='message-container'>
         {messages.map((message, index) => (
-          <div key={index}>{message}</div>
+          <div
+            key={index}
+            className={`message ${message.includes("User1") ? "own-message" : "other-message"}`}
+          >
+            {message}
+          </div>
         ))}
       </div>
-      <input type='text' value={messageInput} onChange={(e) => setMessageInput(e.target.value)} />
-      <button onClick={sendMessage}>Enviar</button>
+      <div className='input-container'>
+        <input
+          type='text'
+          value={messageInput}
+          onChange={(e) => setMessageInput(e.target.value)}
+          className='message-input'
+        />
+        <button onClick={sendMessage} className='send-button'>
+          Enviar
+        </button>
+      </div>
     </div>
   );
 };
